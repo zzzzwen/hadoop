@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.Comparator;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -109,7 +111,7 @@ public class BinpackScheduler extends
     AbstractYarnScheduler<FiCaSchedulerApp, FiCaSchedulerNode> implements
     Configurable {
 
-  private static final Log LOG = LogFactory.getLog(FifoScheduler.class);
+  private static final Log LOG = LogFactory.getLog(BinpackScheduler.class);
 
   private static final RecordFactory recordFactory = 
     RecordFactoryProvider.getRecordFactory(null);
@@ -233,8 +235,8 @@ public class BinpackScheduler extends
     }
   };
 
-  public FifoScheduler() {
-    super(FifoScheduler.class.getName());
+  public BinpackScheduler() {
+    super(BinpackScheduler.class.getName());
   }
 
   private synchronized void initScheduler(Configuration conf) {
@@ -497,7 +499,7 @@ public class BinpackScheduler extends
     attempt.stop(rmAppAttemptFinalState);
   }
   
-  class resourceComparator implements Comparator<Entry<ApplicationId, SchedulerApplication<FiCaSchedulerApp>>> {
+  class resourceComparator implements Comparator<Map.Entry<ApplicationId, SchedulerApplication<FiCaSchedulerApp>>> {
 	  FiCaSchedulerNode node;
 	  
 	  resourceComparator(FiCaSchedulerNode node) {
@@ -505,8 +507,8 @@ public class BinpackScheduler extends
 	  }
 	  
 	  @Override
-	  public int compare(Entry<ApplicationId, SchedulerApplication<FiCaSchedulerApp>> app1, 
-			  Entry<ApplicationId, SchedulerApplication<FiCaSchedulerApp>> app2) {
+	  public int compare(Map.Entry<ApplicationId, SchedulerApplication<FiCaSchedulerApp>> app1, 
+			  Map.Entry<ApplicationId, SchedulerApplication<FiCaSchedulerApp>> app2) {
 		  FiCaSchedulerApp application1 = app1.getValue().getCurrentAppAttempt();
 		  FiCaSchedulerApp application2 = app2.getValue().getCurrentAppAttempt();
 		  
@@ -531,11 +533,12 @@ public class BinpackScheduler extends
     
     // TODO : sort applications according to alignment with current node
     
-    List<Entry<ApplicationId, SchedulerApplication<FiCaSchedulerApp>>> list = new ArrayList<>(applications.entrySet());
+    List<Map.Entry<ApplicationId, SchedulerApplication<FiCaSchedulerApp>>> list = new ArrayList<>(applications.entrySet());
     Collections.sort(list, new resourceComparator(node));
     
-    ConcurrentMap<ApplicationId, SchedulerApplication<FiCaSchedulerApp>> result = new  ConcurrentMap<ApplicationId, SchedulerApplication<FiCaSchedulerApp>>();
-    for (Entry<ApplicationId, SchedulerApplication<FiCaSchedulerApp>> entry : list) {
+    Map<ApplicationId, SchedulerApplication<FiCaSchedulerApp>> result = 
+        new ConcurrentHashMap<ApplicationId, SchedulerApplication<FiCaSchedulerApp>>();
+    for (Map.Entry<ApplicationId, SchedulerApplication<FiCaSchedulerApp>> entry : list) {
         result.put(entry.getKey(), entry.getValue());
     }
     
@@ -933,7 +936,7 @@ public class BinpackScheduler extends
     }
   }
 
-  @Lock(FifoScheduler.class)
+  @Lock(BinpackScheduler.class)
   @Override
   protected synchronized void completedContainerInternal(
       RMContainer rmContainer, ContainerStatus containerStatus,
