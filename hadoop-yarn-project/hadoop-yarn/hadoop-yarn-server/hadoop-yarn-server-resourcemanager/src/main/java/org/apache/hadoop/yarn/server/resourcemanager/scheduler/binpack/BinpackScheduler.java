@@ -515,9 +515,18 @@ public class BinpackScheduler extends
 		  Resource unallocated = this.node.getAvailableResource();
 		  
 		  Resource app1Request = application1.getTotalPendingRequests();
-		  Resource app2Request = application2.getTotalPendingRequests();
+      Resource app2Request = application2.getTotalPendingRequests();
+      
+      Resource total = this.node.getTotalResource();
+      
+      double value1 = 1.0 * unallocated.getVirtualCores() / total.getVirtualCores() * app1Request.getVirtualCores() / total.getVirtualCores() + 
+          1.0 * unallocated.getMemorySize() / total.getMemorySize() * app1Request.getMemorySize() / total.getMemorySize(); 
+      
+      double value2 = 1.0 * unallocated.getVirtualCores() / total.getVirtualCores() * app2Request.getVirtualCores() / total.getVirtualCores() + 
+      1.0 * unallocated.getMemorySize() / total.getMemorySize() * app2Request.getMemorySize() / total.getMemorySize(); 
+
 		  //getMemory getVirtualCores
-		  return unallocated.getMemory() * app1Request.getMemory() - unallocated.getMemory() * app2Request.getMemory();
+      return Double.compare(value1, value2);
 	  }
   }
   
@@ -550,6 +559,8 @@ public class BinpackScheduler extends
       if (application == null) {
         continue;
       }
+
+      LOG.info("assign containers for application id: " + application.getApplicationId().getId());
 
       LOG.debug("pre-assignContainers");
       application.showRequests();
