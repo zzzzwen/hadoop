@@ -526,7 +526,7 @@ public class BinpackScheduler extends
       1.0 * unallocated.getMemorySize() / total.getMemorySize() * app2Request.getMemorySize() / total.getMemorySize(); 
 
 		  //getMemory getVirtualCores
-      return Double.compare(value1, value2);
+      return Double.compare(value2, value1);
 	  }
   }
   
@@ -545,16 +545,29 @@ public class BinpackScheduler extends
     List<Map.Entry<ApplicationId, SchedulerApplication<FiCaSchedulerApp>>> list = new ArrayList<>(applications.entrySet());
     Collections.sort(list, new resourceComparator(node));
     
-    Map<ApplicationId, SchedulerApplication<FiCaSchedulerApp>> result = 
-        new ConcurrentHashMap<ApplicationId, SchedulerApplication<FiCaSchedulerApp>>();
-    for (Map.Entry<ApplicationId, SchedulerApplication<FiCaSchedulerApp>> entry : list) {
-        result.put(entry.getKey(), entry.getValue());
-    }
+    // Map<ApplicationId, SchedulerApplication<FiCaSchedulerApp>> result = 
+    //     new ConcurrentHashMap<ApplicationId, SchedulerApplication<FiCaSchedulerApp>>();
+    // for (Map.Entry<ApplicationId, SchedulerApplication<FiCaSchedulerApp>> entry : list) {
+    //     LOG.info("sort sequence: " + entry.getValue().getCurrentAppAttempt().getApplicationId().getId());
+    //     result.put(entry.getKey(), entry.getValue());
+    // }
     
-    
+    for (Map.Entry<ApplicationId, SchedulerApplication<FiCaSchedulerApp>> e : list) {
+          FiCaSchedulerApp application = e.getValue().getCurrentAppAttempt();
+          Resource totalrequest = application.getTotalPendingRequests();
+          Resource unallocated = node.getAvailableResource();
+          Resource total = node.getTotalResource();
+          double dot =  1.0 * unallocated.getVirtualCores() / total.getVirtualCores() * totalrequest.getVirtualCores() / total.getVirtualCores() + 
+          1.0 * unallocated.getMemorySize() / total.getMemorySize() * totalrequest.getMemorySize() / total.getMemorySize();
+          LOG.info("resource request: " + application.getApplicationId().getId() + 
+            " resource: " + totalrequest.getVirtualCores()  + "/" + totalrequest.getMemorySize() + 
+            " node: [total:" + total.getVirtualCores() + "/" + total.getMemorySize() + "] [unallocated:" + unallocated.getVirtualCores() + "/" + unallocated.getMemorySize() + "] " +
+            " dotproduct: " + dot);
+        }
+
+
     // Try to assign containers to applications in binpack order
-    for (Map.Entry<ApplicationId, SchedulerApplication<FiCaSchedulerApp>> e : result
-        .entrySet()) {
+    for (Map.Entry<ApplicationId, SchedulerApplication<FiCaSchedulerApp>> e : list) {
       FiCaSchedulerApp application = e.getValue().getCurrentAppAttempt();
       if (application == null) {
         continue;
